@@ -4,11 +4,40 @@ const port = 3000;
 const express = require("express");
 const app = express();
 
-// Other Requirements
+// Parsing requests
 const bodyParser = require("body-parser");
+
+// EJS templating engine
 const ejs = require("ejs");
+
+// Utils for URL string transformations
 const _ = require("lodash");
+
+// Creating Database
 const mongoose = require("mongoose"); 
+mongoose.connect("mongodb://localhost:27017/postsDB", { useNewUrlParser: true, useUnifiedTopology: true});
+
+// Reporting on database connection
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+  console.log("Connected to database.")
+})
+
+// Create Schema
+const postSchema = new mongoose.Schema ({
+  postTitleLC: String,
+  postTitle: String,
+  postBody: String
+});
+
+const userSchema = new mongoose.Schema ({
+  userName: String,
+  userEmail: String
+});
+
+// Create Model
+const Post = mongoose.model("Post", postSchema);
 
 // Set ejs templating engine
 app.set('view engine', 'ejs');
@@ -19,10 +48,15 @@ app.use(bodyParser.urlencoded({extended: true}));
 // Serving static content
 app.use(express.static("public"));
 
-posts=[];
-
+// Routes
 app.get("/", (req, res) => {
-  res.render("home");
+  Post.find({}, function(err, posts) {
+    if(err){
+      console.log(err);
+    } else {
+      res.render("home", {posts:posts});
+    }
+  });
 });
 
 app.get("/about", (req, res) => {
@@ -34,40 +68,29 @@ app.get("/contact", (req, res) => {
 });
 
 app.get("/compose", (req, res) => {
-  res.render("compose", {
-    posts:posts
-  });
+  res.render("compose");
 });
 
 app.post("/compose", (req, res) => {
-  const post = {
-    postTitleLC : _.lowerCase([req.body.postTitle]),
-    postTitle : req.body.postTitle,
-    postBody : req.body.postBody
-  };
-  posts.push(post);
+  const post = new Post({
+    postTitleLC: _.lowerCase(req.body.postTitle),
+    postTitle: req.body.postTitle,
+    postBody: req.body.postBody
+  })
+  post.save();
   res.redirect("/");
 });
 
 app.get("/posts/:postSlug", (req, res) => {
-  var postSlug = _.lowerCase([req.params.postSlug]);
+  var postSlug = _.lowerCase(req.params.postSlug);
 
-  try {
-
-    posts.forEach(function(post){
-      const postTitleLC = post.postTitleLC;
-
-      if(postSlug === postTitleLC) {
-        res.render("post", {
-          postTitle: post.postTitle,
-          postBody: post.postBody
-        });
-      }
-    });
-  }
-  catch (error) {
-    console.log(error);
-  }
+  Post.findOne({postTitleLC: postSlug}, function(err, post) {
+    if(err) {
+      console.log(err);
+    } else {
+      res.render("post", {post:post})
+    }
+  });
 });
 
 app.get("/404", (req, res) => {
