@@ -5,4 +5,8 @@
 <h2><%= post.postTitle %> </h2>
 <p><%= post.postBody %> </p>
 
+<a class="btn btn-primary" href="/posts/update/<%= post.postTitleLC %>">Update</a>
+<a class="btn btn-danger" href="/posts/delete/<%= post.postTitleLC %>">Delete</a>
+
+
 <%- include('partials/footer'); %> 

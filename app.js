@@ -12,6 +12,7 @@ const ejs = require("ejs");
 
 // Utils for URL string transformations
 const _ = require("lodash");
+const slugify = require("slugify");
 
 // Creating Database
 const mongoose = require("mongoose"); 
@@ -78,18 +79,73 @@ app.post("/compose", (req, res) => {
     postBody: req.body.postBody
   })
   post.save();
-  res.redirect("/");
+  postSlug = slugify(_.lowerCase(req.body.postTitle));
+  res.redirect("/posts/"+postSlug);
 });
 
 app.get("/posts/:postSlug", (req, res) => {
-  var postSlug = _.lowerCase(req.params.postSlug);
-
+  if (req.params.post) {
+    var postSlug = req.params.post.postTitleLC;
+    console.log(postSlug);
+  } else {
+    var postSlug = _.lowerCase(req.params.postSlug);
+  }
   Post.findOne({postTitleLC: postSlug}, function(err, post) {
     if(err) {
       console.log(err);
     } else {
-      res.render("post", {post:post})
+      res.render("post", {post:post}) }
+  });
+});
+
+app.get("/posts/update/:postSlug", (req, res) => {
+  var postSlug = _.lowerCase(req.params.postSlug);
+  Post.findOne({postTitleLC: postSlug}, function(err, post) {
+    if(err) {
+      console.log(err);
+      res.redirect("/");
+    } else {
+      posts = Post.find({},function(err, posts){
+        if(err) {
+          console.log(err)
+        } else {
+          res.render("home", {posts:posts})
+        }
+      });
     }
+  });
+});
+
+app.post("/posts/update/:postSlug", (req, res) => {
+  var postSlug = _.lowerCase(req.params.postSlug);
+  const post = new Post({
+    postTitleLC: _.lowerCase(req.body.postTitle),
+    postTitle: req.body.postTitle,
+    postBody: req.body.postBody
+  })
+  Post.updateOne({postTitleLC: postSlug}, 
+    {postTitleLC: postTitleLC,
+    postTitle: postTitle,
+    postBody: postBody}, 
+    function(err) {
+      if(err) {
+        console.log(err);
+      } else {
+        console.log("Successfully updated the post.");
+      };
+    });
+  post.save();
+  postSlug = slugify(_.lowerCase(req.body.postTitle));
+  res.redirect("/posts/"+postSlug, {post: post});
+});
+
+app.get("/posts/delete/:postSlug", (req, res) => {
+  var postSlug = _.lowerCase(req.params.postSlug);
+  Post.deleteOne({postTitleLC: postSlug}, function(err, post) {
+    if(err) {
+      console.log(err);
+    }
+    res.redirect("/");
   });
 });
 
